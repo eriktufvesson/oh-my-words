@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Oh My Words - Glosträning</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📚 Oh My Words</h1>
+            <p class="subtitle">Träna dina glosor på ett roligt sätt</p>
+        </header>
+
+        <nav class="tab-nav">
+            <button class="tab-btn active" data-tab="manage">Hantera ord</button>
+            <button class="tab-btn" data-tab="write">Skriv orden</button>
+            <button class="tab-btn" data-tab="match">Para ihop</button>
+            <button class="tab-btn" data-tab="listen">Lyssna & skriv</button>
+        </nav>
+
+        <!-- Tab 1: Manage Words -->
+        <section id="manage-tab" class="tab-content active">
+            <div class="add-word-section">
+                <h2>Lägg till nya ord</h2>
+                <p class="hint-text">Skriv ett svenskt ord så översätts det automatiskt!</p>
+                <div class="input-group">
+                    <input type="text" id="swedish-word" placeholder="Svenskt ord" />
+                    <div class="translation-input-wrapper">
+                        <input type="text" id="translation" placeholder="Översättning (fylls i automatiskt)" />
+                        <span id="translate-loader" class="loader" style="display: none;">⏳</span>
+                    </div>
+                    <select id="language-select">
+                        <option value="en-US">Engelska</option>
+                        <option value="es-ES">Spanska</option>
+                        <option value="fr-FR">Franska</option>
+                        <option value="de-DE">Tyska</option>
+                        <option value="it-IT">Italienska</option>
+                        <option value="pt-PT">Portugisiska</option>
+                    </select>
+                    <button id="add-word-btn" class="btn btn-primary">Lägg till</button>
+                </div>
+                <div id="synonyms-container" class="synonyms-container" style="display: none;">
+                    <p class="synonyms-label">Välj översättning:</p>
+                    <div id="synonyms-list" class="synonyms-list"></div>
+                </div>
+            </div>
+
+            <div class="word-list-section">
+                <div class="word-list-header">
+                    <h2>Dina ord</h2>
+                    <button id="clear-all-btn" class="btn btn-danger" style="display: none;">🗑️ Rensa alla</button>
+                </div>
+                <div id="word-list" class="word-list"></div>
+            </div>
+        </section>
+
+        <!-- Tab 2: Writing Practice -->
+        <section id="write-tab" class="tab-content">
+            <div class="practice-section">
+                <h2>Skriv orden</h2>
+                <div id="write-practice" class="practice-area">
+                    <p class="no-words">Lägg till ord först för att börja öva!</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 3: Matching Pairs -->
+        <section id="match-tab" class="tab-content">
+            <div class="practice-section">
+                <h2>Para ihop orden</h2>
+                <div id="match-practice" class="practice-area">
+                    <p class="no-words">Lägg till minst 4 ord för att para ihop!</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tab 4: Listen and Write -->
+        <section id="listen-tab" class="tab-content">
+            <div class="practice-section">
+                <h2>Lyssna och skriv</h2>
+                <div id="listen-practice" class="practice-area">
+                    <p class="no-words">Lägg till ord först för att börja öva!</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
