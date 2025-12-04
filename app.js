@@ -252,18 +252,28 @@ function renderWordList() {
     container.innerHTML = words.map(word => `
         <div class="word-item">
             <div class="word-info">
-                <div class="word-swedish">${word.swedish}</div>
+                <div class="word-swedish">${escapeHtml(word.swedish)}</div>
                 <div class="word-translation">
-                    <span>${word.translation}</span>
+                    <span>${escapeHtml(word.translation)}</span>
                     <span class="word-language">${languageNamesSwedish[word.language]}</span>
                 </div>
             </div>
             <div class="word-actions">
-                <button class="btn btn-listen" onclick="speakWord('${word.translation}', '${word.language}', this, ${word.id})">🔊 Lyssna</button>
+                <button class="btn btn-listen" data-word-text="${escapeHtml(word.translation)}" data-word-lang="${word.language}" data-word-id="${word.id}">🔊 Lyssna</button>
                 <button class="btn btn-danger" onclick="deleteWord(${word.id})">🗑️</button>
             </div>
         </div>
     `).join('');
+    
+    // Add event listeners to listen buttons
+    container.querySelectorAll('.btn-listen').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const text = this.dataset.wordText;
+            const lang = this.dataset.wordLang;
+            const id = parseInt(this.dataset.wordId);
+            speakWord(text, lang, this, id);
+        });
+    });
 }
 
 // Auto-translate function
@@ -569,6 +579,13 @@ function isAnswerCorrect(userAnswer, correctAnswer) {
     return false;
 }
 
+// Helper function to escape HTML attributes
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // Writing Practice
 function initWritePractice() {
     const container = document.getElementById('write-practice');
@@ -605,17 +622,28 @@ function showWritePracticeCard() {
     container.innerHTML = `
         <div class="practice-card">
             <div class="score">Poäng: ${practiceScore.correct} / ${practiceScore.total} | Kvar: ${remainingWords.length}</div>
-            <div class="practice-prompt">${word.swedish}</div>
+            <div class="practice-prompt">${escapeHtml(word.swedish)}</div>
             <p style="color: #6c757d; margin-bottom: 20px;">Skriv ordet på ${getLanguageName(word.language)}${currentAttempts > 0 ? ` (Försök ${currentAttempts + 1}/2)` : ''}</p>
             <input type="text" class="practice-input" id="write-answer" placeholder="Skriv här..." autocomplete="off">
             <div class="practice-buttons">
-                <button class="btn btn-listen" onclick="speakWord('${word.translation}', '${word.language}', this, ${word.id}, 'write-answer')">🔊 Lyssna</button>
+                <button class="btn btn-listen" id="write-listen-btn" data-word-text="${escapeHtml(word.translation)}" data-word-lang="${word.language}" data-word-id="${word.id}">🔊 Lyssna</button>
                 <button class="btn btn-primary" onclick="checkWriteAnswer()">Kontrollera</button>
                 <button class="btn btn-secondary" onclick="skipWritePractice()">Hoppa över</button>
             </div>
             <div id="write-feedback"></div>
         </div>
     `;
+
+    // Add event listener to listen button
+    const listenBtn = document.getElementById('write-listen-btn');
+    if (listenBtn) {
+        listenBtn.addEventListener('click', function() {
+            const text = this.dataset.wordText;
+            const lang = this.dataset.wordLang;
+            const id = parseInt(this.dataset.wordId);
+            speakWord(text, lang, this, id, 'write-answer');
+        });
+    }
 
     document.getElementById('write-answer').focus();
     document.getElementById('write-answer').addEventListener('keypress', (e) => {
@@ -742,12 +770,12 @@ function initMatchPracticeMobile() {
         container.innerHTML = `
             <div class="practice-card">
                 <div class="score">Poäng: ${practiceScore.correct} / ${practiceScore.total} | Ord: ${currentIndex + 1}/${shuffledWords.length}</div>
-                <div class="practice-prompt">${currentWord.swedish}</div>
+                <div class="practice-prompt">${escapeHtml(currentWord.swedish)}</div>
                 <p style="color: #6c757d; margin-bottom: 20px;">Välj rätt översättning</p>
                 <div class="mobile-match-options">
                     ${allTranslations.map(trans => `
-                        <button class="mobile-match-btn" data-id="${trans.id}" data-language="${trans.language}" data-text="${trans.text}">
-                            ${trans.text}
+                        <button class="mobile-match-btn" data-id="${trans.id}" data-language="${trans.language}" data-text="${escapeHtml(trans.text)}">
+                            ${escapeHtml(trans.text)}
                         </button>
                     `).join('')}
                 </div>
@@ -788,7 +816,7 @@ function initMatchPracticeMobile() {
                     });
                     
                     feedback.className = 'feedback incorrect';
-                    feedback.innerHTML = `❌ Fel. Rätt svar: ${currentWord.translation}`;
+                    feedback.innerHTML = `❌ Fel. Rätt svar: ${escapeHtml(currentWord.translation)}`;
                     
                     setTimeout(() => {
                         currentIndex++;
@@ -972,7 +1000,7 @@ function showListenPracticeCard() {
             </div>
             <div class="practice-prompt">🔊 Lyssna och skriv</div>
             <p style="color: #6c757d; margin-bottom: 20px;">Klicka på knappen för att höra ordet, skriv sedan det ${promptText}${currentAttempts > 0 ? ` (Försök ${currentAttempts + 1}/2)` : ''}</p>
-            <button class="btn btn-listen" onclick="speakWord('${word.translation}', '${word.language}', this, ${word.id}, 'listen-answer')" style="margin-bottom: 20px; font-size: 1.2em; padding: 15px 30px;">
+            <button class="btn btn-listen" id="listen-play-btn" data-word-text="${escapeHtml(word.translation)}" data-word-lang="${word.language}" data-word-id="${word.id}" style="margin-bottom: 20px; font-size: 1.2em; padding: 15px 30px;">
                 🔊 Spela upp ordet
             </button>
             <input type="text" class="practice-input" id="listen-answer" placeholder="Skriv ${promptText}..." autocomplete="off">
@@ -983,6 +1011,14 @@ function showListenPracticeCard() {
             <div id="listen-feedback"></div>
         </div>
     `;
+
+    // Add event listener to listen button
+    document.getElementById('listen-play-btn').addEventListener('click', function() {
+        const text = this.dataset.wordText;
+        const lang = this.dataset.wordLang;
+        const id = parseInt(this.dataset.wordId);
+        speakWord(text, lang, this, id, 'listen-answer');
+    });
 
     document.getElementById('listen-answer').focus();
     document.getElementById('listen-answer').addEventListener('keypress', (e) => {
