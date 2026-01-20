@@ -6,6 +6,79 @@ let currentAttempts = 0;
 let remainingWords = [];
 let listenDirection = 'swedish'; // 'swedish' or 'target'
 
+// Fun celebration messages
+const celebrationMessages = [
+    '🌟 Fantastiskt! 🌟',
+    '💖 Rätt! Du är grym! 💖',
+    '✨ Woohoo! Rätt svar! ✨',
+    '🎀 Perfekt! 🎀',
+    '💫 Superduper! 💫',
+    '🦄 Magiskt bra! 🦄',
+    '🌈 Strålande! 🌈',
+    '💕 Du fixade det! 💕',
+    '🎉 Hurra! Rätt! 🎉',
+    '⭐ Stjärnkoll! ⭐'
+];
+
+const encouragementMessages = [
+    '💪 Försök igen! Du klarar det!',
+    '🌸 Nästan! Prova en gång till!',
+    '💖 Ge inte upp! Ett försök kvar!',
+    '✨ Du är nära! Försök igen!'
+];
+
+function getRandomCelebration() {
+    return celebrationMessages[Math.floor(Math.random() * celebrationMessages.length)];
+}
+
+function getRandomEncouragement() {
+    return encouragementMessages[Math.floor(Math.random() * encouragementMessages.length)];
+}
+
+// Confetti celebration effect
+function createConfetti() {
+    const colors = ['#ff6b9d', '#ff9a9e', '#ffc3d7', '#ffb6c1', '#a18cd1', '#c9a7eb', '#7dd3a8', '#ffd700', '#ff69b4'];
+    const confettiCount = 50;
+
+    for (let i = 0; i < confettiCount; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.cssText = `
+            position: fixed;
+            width: ${Math.random() * 10 + 8}px;
+            height: ${Math.random() * 10 + 8}px;
+            background: ${colors[Math.floor(Math.random() * colors.length)]};
+            left: ${Math.random() * 100}vw;
+            top: -20px;
+            border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+            pointer-events: none;
+            z-index: 9999;
+            animation: confettiFall ${Math.random() * 2 + 2}s ease-out forwards;
+            animation-delay: ${Math.random() * 0.5}s;
+            transform: rotate(${Math.random() * 360}deg);
+        `;
+        document.body.appendChild(confetti);
+
+        setTimeout(() => confetti.remove(), 4000);
+    }
+}
+
+// Add confetti animation to document
+const confettiStyle = document.createElement('style');
+confettiStyle.textContent = `
+    @keyframes confettiFall {
+        0% {
+            transform: translateY(0) rotate(0deg) scale(1);
+            opacity: 1;
+        }
+        100% {
+            transform: translateY(100vh) rotate(720deg) scale(0.5);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(confettiStyle);
+
 // Gemini API configuration
 const GEMINI_API_KEY = localStorage.getItem('gemini_api_key') || '';
 const GEMINI_TTS_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent';
@@ -661,8 +734,9 @@ function checkWriteAnswer() {
     if (correct) {
         practiceScore.correct++;
         feedback.className = 'feedback correct';
-        feedback.innerHTML = '✅ Rätt! Bra jobbat!';
-        
+        feedback.innerHTML = getRandomCelebration();
+        createConfetti();
+
         setTimeout(() => {
             // Remove word from remaining list
             remainingWords.splice(currentPracticeIndex, 1);
@@ -675,12 +749,12 @@ function checkWriteAnswer() {
         }, 1500);
     } else {
         currentAttempts++;
-        
+
         if (currentAttempts >= 2) {
             // Second attempt failed - move word to end of list
             feedback.className = 'feedback incorrect';
-            feedback.innerHTML = `❌ Fel. Rätt svar: ${word.translation}`;
-            
+            feedback.innerHTML = `💔 Rätt svar: ${word.translation}`;
+
             setTimeout(() => {
                 // Move word to end of remaining list
                 const failedWord = remainingWords.splice(currentPracticeIndex, 1)[0];
@@ -695,7 +769,7 @@ function checkWriteAnswer() {
         } else {
             // First attempt failed, allow retry
             feedback.className = 'feedback incorrect';
-            feedback.innerHTML = '❌ Fel, försök igen! (1 försök kvar)';
+            feedback.innerHTML = getRandomEncouragement();
             document.getElementById('write-answer').value = '';
             document.getElementById('write-answer').focus();
         }
@@ -797,11 +871,12 @@ function initMatchPracticeMobile() {
                     practiceScore.correct++;
                     btn.classList.add('correct');
                     feedback.className = 'feedback correct';
-                    feedback.innerHTML = '✅ Rätt!';
-                    
+                    feedback.innerHTML = getRandomCelebration();
+                    createConfetti();
+
                     // Play audio
                     speakWord(btn.dataset.text, btn.dataset.language, null, selectedId);
-                    
+
                     setTimeout(() => {
                         currentIndex++;
                         showNextWord();
@@ -814,9 +889,9 @@ function initMatchPracticeMobile() {
                             b.classList.add('correct');
                         }
                     });
-                    
+
                     feedback.className = 'feedback incorrect';
-                    feedback.innerHTML = `❌ Fel. Rätt svar: ${escapeHtml(currentWord.translation)}`;
+                    feedback.innerHTML = `💔 Rätt svar: ${escapeHtml(currentWord.translation)}`;
                     
                     setTimeout(() => {
                         currentIndex++;
@@ -1037,8 +1112,9 @@ function checkListenAnswer() {
     if (correct) {
         practiceScore.correct++;
         feedback.className = 'feedback correct';
-        feedback.innerHTML = '✅ Rätt! Bra jobbat!';
-        
+        feedback.innerHTML = getRandomCelebration();
+        createConfetti();
+
         setTimeout(() => {
             // Remove word from remaining list
             remainingWords.splice(currentPracticeIndex, 1);
@@ -1051,12 +1127,12 @@ function checkListenAnswer() {
         }, 1500);
     } else {
         currentAttempts++;
-        
+
         if (currentAttempts >= 2) {
             // Second attempt failed - move word to end of list
             feedback.className = 'feedback incorrect';
-            feedback.innerHTML = `❌ Fel. Rätt svar: ${correctAnswer}`;
-            
+            feedback.innerHTML = `💔 Rätt svar: ${correctAnswer}`;
+
             setTimeout(() => {
                 // Move word to end of remaining list
                 const failedWord = remainingWords.splice(currentPracticeIndex, 1)[0];
@@ -1071,7 +1147,7 @@ function checkListenAnswer() {
         } else {
             // First attempt failed, allow retry
             feedback.className = 'feedback incorrect';
-            feedback.innerHTML = '❌ Fel, försök igen! (1 försök kvar)';
+            feedback.innerHTML = getRandomEncouragement();
             document.getElementById('listen-answer').value = '';
             document.getElementById('listen-answer').focus();
         }
