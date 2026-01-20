@@ -92,7 +92,9 @@ const languageVoices = {
     'de-DE': 'Fenrir',
     'it-IT': 'Puck',
     'pt-PT': 'Aoede',
-    'sv-SE': 'Puck'
+    'sv-SE': 'Puck',
+    'ko-KR': 'Kore',
+    'ja-JP': 'Kore'
 };
 
 // Language names for translation
@@ -103,7 +105,9 @@ const languageNames = {
     'de-DE': 'German',
     'it-IT': 'Italian',
     'pt-PT': 'Portuguese',
-    'sv-SE': 'Swedish'
+    'sv-SE': 'Swedish',
+    'ko-KR': 'Korean',
+    'ja-JP': 'Japanese'
 };
 
 // Language codes for TTS (helps Gemini detect correct language)
@@ -114,7 +118,9 @@ const languageCodes = {
     'de-DE': 'de-DE',
     'it-IT': 'it-IT',
     'pt-PT': 'pt-PT',
-    'sv-SE': 'sv-SE'
+    'sv-SE': 'sv-SE',
+    'ko-KR': 'ko-KR',
+    'ja-JP': 'ja-JP'
 };
 
 // Debounce timer
@@ -122,11 +128,55 @@ let translateTimeout = null;
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
+    loadTheme();
     loadWords();
     loadLanguagePreference();
     setupEventListeners();
+    setupThemeSelector();
     checkAPIKey();
 });
+
+// Theme handling
+function loadTheme() {
+    const savedTheme = localStorage.getItem('oh_my_words_theme') || 'pink';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateHeaderEmoji(savedTheme);
+}
+
+function setTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('oh_my_words_theme', theme);
+    updateHeaderEmoji(theme);
+
+    // Update active button
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.theme === theme);
+    });
+}
+
+function updateHeaderEmoji(theme) {
+    const emojis = {
+        'pink': '💖',
+        'ocean': '🌊',
+        'forest': '🌿',
+        'sunset': '🌅',
+        'galaxy': '🌌'
+    };
+    const emoji = emojis[theme] || '💖';
+    const h1 = document.querySelector('header h1');
+    if (h1) {
+        h1.textContent = `${emoji} Oh My Words ${emoji}`;
+    }
+}
+
+function setupThemeSelector() {
+    // Set active button based on current theme
+    const currentTheme = localStorage.getItem('oh_my_words_theme') || 'pink';
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.theme === currentTheme);
+        btn.addEventListener('click', () => setTheme(btn.dataset.theme));
+    });
+}
 
 // Check if API key exists
 function checkAPIKey() {
@@ -319,7 +369,9 @@ function renderWordList() {
         'fr-FR': 'Franska',
         'de-DE': 'Tyska',
         'it-IT': 'Italienska',
-        'pt-PT': 'Portugisiska'
+        'pt-PT': 'Portugisiska',
+        'ko-KR': 'Koreanska',
+        'ja-JP': 'Japanska'
     };
 
     container.innerHTML = words.map(word => `
