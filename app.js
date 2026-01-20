@@ -472,6 +472,65 @@ Swedish: ${text}`;
     }
 }
 
+// Check if an error should trigger a retry
+function shouldRetry(error) {
+    const message = error.message || '';
+    // Retry on network errors, server errors, or rate limits
+    return message.includes('Nätverksfel') ||
+           message.includes('tillfälligt otillgänglig') ||
+           message.includes('För många förfrågningar') ||
+           message.includes('API-fel (5');
+}
+
+// Show a toast notification to the user
+function showToast(message, type = 'info') {
+    // Remove existing toast if any
+    const existingToast = document.querySelector('.toast-notification');
+    if (existingToast) {
+        existingToast.remove();
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `toast-notification toast-${type}`;
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 15px 25px;
+        border-radius: 25px;
+        font-weight: 600;
+        z-index: 10000;
+        animation: toastIn 0.3s ease, toastOut 0.3s ease 3.7s forwards;
+        max-width: 90%;
+        text-align: center;
+        ${type === 'error'
+            ? 'background: linear-gradient(135deg, #ff8fa3 0%, #ffb3c1 100%); color: white; box-shadow: 0 4px 15px rgba(255, 143, 163, 0.4);'
+            : 'background: linear-gradient(135deg, #7dd3a8 0%, #98e4bc 100%); color: white; box-shadow: 0 4px 15px rgba(125, 211, 168, 0.4);'
+        }
+    `;
+
+    document.body.appendChild(toast);
+
+    // Remove after animation
+    setTimeout(() => toast.remove(), 4000);
+}
+
+// Add toast animation styles
+const toastStyle = document.createElement('style');
+toastStyle.textContent = `
+    @keyframes toastIn {
+        from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+        to { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+    @keyframes toastOut {
+        from { opacity: 1; transform: translateX(-50%) translateY(0); }
+        to { opacity: 0; transform: translateX(-50%) translateY(20px); }
+    }
+`;
+document.head.appendChild(toastStyle);
+
 // Generate audio data for a word and return it
 async function generateAudioData(text, language) {
     if (!GEMINI_API_KEY) {
@@ -487,43 +546,77 @@ async function generateAudioData(text, language) {
 
     const textPrompt = `Read the following text in ${languageNames[language]}: ${text}`;
 
-    const response = await fetch(`${GEMINI_TTS_ENDPOINT}?key=${GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            contents: [{
-                parts: [{ text: textPrompt }]
-            }],
-            generationConfig: {
-                responseModalities: ["AUDIO"],
-                speechConfig: {
-                    voiceConfig: {
-                        prebuiltVoiceConfig: {
-                            voiceName: voiceBase
+    let response;
+    try {
+        response = await fetch(`${GEMINI_TTS_ENDPOINT}?key=${GEMINI_API_KEY}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{ text: textPrompt }]
+                }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: {
+                                voiceName: voiceBase
+                            }
                         }
                     }
                 }
-            }
-        })
-    });
+            })
+        });
+    } catch (networkError) {
+        console.error('Network error during TTS request:', networkError);
+        throw new Error('Nätverksfel - kontrollera din internetanslutning');
+    }
 
-    const data = await response.json();
+    if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error('TTS API error:', response.status, errorText);
+        if (response.status === 429) {
+            throw new Error('För många förfrågningar - vänta lite och försök igen');
+        } else if (response.status === 401 || response.status === 403) {
+            throw new Error('Ogiltig API-nyckel - kontrollera din nyckel');
+        } else if (response.status >= 500) {
+            throw new Error('Tjänsten är tillfälligt otillgänglig - försök igen');
+        }
+        throw new Error(`API-fel (${response.status})`);
+    }
+
+    let data;
+    try {
+        data = await response.json();
+    } catch (parseError) {
+        console.error('Failed to parse TTS response:', parseError);
+        throw new Error('Oväntat svar från servern');
+    }
 
     // Extract and return audio data
     if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
         const audioPart = data.candidates[0].content.parts[0];
-        if (audioPart && audioPart.inlineData) {
+        if (audioPart && audioPart.inlineData && audioPart.inlineData.data) {
             return audioPart.inlineData.data;
         }
     }
 
-    throw new Error('No audio data in response');
+    // Check for error in response
+    if (data.error) {
+        console.error('TTS API returned error:', data.error);
+        throw new Error(data.error.message || 'API returnerade ett fel');
+    }
+
+    console.error('Unexpected TTS response structure:', data);
+    throw new Error('Inget ljud i svaret från servern');
 }
 
 // Text-to-speech using Gemini 2.5 TTS or saved audio
-async function speakWord(text, language, buttonElement = null, wordId = null, focusInputAfter = null) {
+async function speakWord(text, language, buttonElement = null, wordId = null, focusInputAfter = null, retryCount = 0) {
+    const MAX_RETRIES = 2;
+
     // Store original button content and disable button
     let originalHTML = '';
     if (buttonElement) {
@@ -546,7 +639,7 @@ async function speakWord(text, language, buttonElement = null, wordId = null, fo
         // If no saved audio, generate it
         if (!audioData) {
             if (!GEMINI_API_KEY) {
-                alert('API-nyckel saknas! Ladda om sidan för att ange den.');
+                showToast('API-nyckel saknas! Ladda om sidan för att ange den.', 'error');
                 return;
             }
             audioData = await generateAudioData(text, language);
@@ -554,7 +647,7 @@ async function speakWord(text, language, buttonElement = null, wordId = null, fo
 
         // Play PCM audio using Web Audio API
         await playPCMAudio(audioData);
-        
+
         // Focus input after audio completes if specified
         if (focusInputAfter) {
             const inputElement = document.getElementById(focusInputAfter);
@@ -564,7 +657,23 @@ async function speakWord(text, language, buttonElement = null, wordId = null, fo
         }
     } catch (error) {
         console.error('TTS Error:', error);
-        alert('Kunde inte spela upp ljudet. Kontrollera din API-nyckel och internetanslutning.');
+
+        // Retry on certain errors
+        if (retryCount < MAX_RETRIES && shouldRetry(error)) {
+            console.log(`Retrying TTS (attempt ${retryCount + 2}/${MAX_RETRIES + 1})...`);
+            // Re-enable button before retry
+            if (buttonElement) {
+                buttonElement.disabled = false;
+                buttonElement.innerHTML = originalHTML;
+            }
+            // Wait a bit before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            return speakWord(text, language, buttonElement, wordId, focusInputAfter, retryCount + 1);
+        }
+
+        // Show user-friendly error message
+        const userMessage = error.message || 'Kunde inte spela upp ljudet';
+        showToast(userMessage, 'error');
     } finally {
         // Re-enable button and restore original content
         if (buttonElement) {
@@ -576,8 +685,23 @@ async function speakWord(text, language, buttonElement = null, wordId = null, fo
 
 // Play PCM audio using Web Audio API
 async function playPCMAudio(base64Data) {
+    if (!base64Data || typeof base64Data !== 'string') {
+        throw new Error('Ogiltig ljuddata');
+    }
+
     // Decode base64 to binary
-    const binaryString = atob(base64Data);
+    let binaryString;
+    try {
+        binaryString = atob(base64Data);
+    } catch (decodeError) {
+        console.error('Failed to decode base64 audio:', decodeError);
+        throw new Error('Kunde inte avkoda ljuddata');
+    }
+
+    if (binaryString.length === 0) {
+        throw new Error('Tom ljuddata mottagen');
+    }
+
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
@@ -620,10 +744,36 @@ async function playPCMAudio(base64Data) {
     // Create blob and play
     const blob = new Blob([wavFile], { type: 'audio/wav' });
     const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
 
-    audio.onended = () => URL.revokeObjectURL(url);
-    await audio.play();
+    return new Promise((resolve, reject) => {
+        const audio = new Audio(url);
+
+        const cleanup = () => {
+            URL.revokeObjectURL(url);
+        };
+
+        audio.onended = () => {
+            cleanup();
+            resolve();
+        };
+
+        audio.onerror = (e) => {
+            cleanup();
+            console.error('Audio playback error:', e);
+            reject(new Error('Kunde inte spela upp ljudet'));
+        };
+
+        audio.play().catch((playError) => {
+            cleanup();
+            console.error('Audio play() failed:', playError);
+            // Check if it's an autoplay restriction
+            if (playError.name === 'NotAllowedError') {
+                reject(new Error('Ljuduppspelning blockerad - klicka någonstans på sidan först'));
+            } else {
+                reject(new Error('Kunde inte starta ljuduppspelning'));
+            }
+        });
+    });
 }
 
 // Helper function to check if answer is correct (more forgiving)
