@@ -88,7 +88,7 @@ const GEMINI_API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/mo
 const languageVoices = {
     'en-US': 'Puck',
     'es-ES': 'Charon',
-    'fr-FR': 'Kore',
+    'fr-FR': 'Aoede',
     'de-DE': 'Fenrir',
     'it-IT': 'Puck',
     'pt-PT': 'Aoede',
@@ -600,6 +600,7 @@ async function generateAudioData(text, language) {
 
     let response;
     try {
+        // https://ai.google.dev/gemini-api/docs/speech-generation#rest
         response = await fetch(`${GEMINI_TTS_ENDPOINT}?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: {
@@ -607,7 +608,7 @@ async function generateAudioData(text, language) {
             },
             body: JSON.stringify({
                 contents: [{
-                    parts: [{ text: textPrompt }]
+                    parts: [{ text: "Read aloud in a warm and friendly voice: " + textPrompt }]
                 }],
                 generationConfig: {
                     responseModalities: ["AUDIO"],
