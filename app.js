@@ -82,7 +82,7 @@ document.head.appendChild(confettiStyle);
 // Gemini API configuration
 const GEMINI_API_KEY = localStorage.getItem('gemini_api_key') || '';
 const GEMINI_TTS_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent';
-const GEMINI_API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
+const GEMINI_API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 // Language voice mapping for Gemini
 const languageVoices = {
